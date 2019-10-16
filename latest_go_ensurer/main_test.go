@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestDockerfileFromUpdate(t *testing.T) {
@@ -69,3 +72,66 @@ func TestDockerfileFromUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestGitHubActionGoldenPath(t *testing.T) {
+	actual, err := updateSingleGitHubActionFile("fake.yml", []byte(simpleGitHubAction), "1.22")
+	if err != nil {
+		t.Fatalf("updateSingleGitHubActionFile: %s", err)
+	}
+	expected := []byte(`name: Go
+
+"on":
+  pull_request:
+    branches:
+    - master
+  push:
+    branches:
+    - master
+
+jobs:
+  test:
+    name: Run Go build
+    runs-on: ubuntu-latest
+    steps:
+    - id: go
+      name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: "1.22"
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+    - name: Build
+      run: go install -race ./...
+`)
+	if !bytes.Equal(expected, actual) {
+		t.Errorf("github action file update failed: %s\n%s", cmp.Diff(expected, actual), string(actual))
+	}
+}
+
+var simpleGitHubAction = `name: Go
+on: 
+  push:
+    branches: 
+      - master
+  pull_request:
+    branches: 
+      - master
+
+jobs:
+  test:
+    name: Run Go build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13.1
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+
+    - name: Build
+      run: go install -race ./...
+`

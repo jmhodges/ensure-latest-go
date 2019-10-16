@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -69,7 +68,6 @@ func updateSingleTravisFile(fp string, origFileContents []byte, goVers string) (
 	default:
 		return nil, fmt.Errorf("unknown type for 'go' value in travis config file %#v: %s", fp, err)
 	}
-	log.Println("FIXMES out", out)
 	ty["go"] = out
 	b, err := yaml.Marshal(ty)
 	if err != nil {

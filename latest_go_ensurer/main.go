@@ -14,6 +14,7 @@ var (
 	excludeFiles     = flag.String("excludeFiles", "", "List of comma-seperated file paths to not update to the latest Go")
 	dockerfilesInput = flag.String("dockerfiles", "", "List of comma-separate file paths to Dockerfiles")
 	travisfilesInput = flag.String("travisfiles", "", "List of comma-separate file paths to .travis.yml Travis config files")
+	actionfilesInput = flag.String("actionfiles", "", "List of comma-separate file paths to GitHub Action config files")
 )
 
 func main() {
@@ -42,7 +43,15 @@ func main() {
 		travisfiles[tf] = true
 	}
 
-	var actionfiles []string
+	actionfiles := make(map[string]bool)
+	for _, af := range strings.Split(*actionfilesInput, ",") {
+		af = abs(af)
+		if af == "" || excluded[af] {
+			continue
+		}
+		actionfiles[af] = true
+	}
+
 	if len(dockerfiles)+len(actionfiles)+len(travisfiles) == 0 {
 		log.Fatalf("latest_go_ensurer: no files given to update. Set -dockerfiles, -travisfiles, or -githubActionFiles")
 	}
@@ -65,9 +74,15 @@ func main() {
 		log.Fatalf("latest_go_ensurer: %s", err)
 	}
 
+	actionContents, err := updateGitHubActionFiles(actionfiles, goVers)
+	if err != nil {
+		log.Fatalf("latest_go_ensurer: %s", err)
+	}
+
 	var contents []fileContent
 	contents = append(contents, dockerContents...)
 	contents = append(contents, travisContents...)
+	contents = append(contents, actionContents...)
 
 	sort.Slice(contents, func(i, j int) bool {
 		return contents[i].origFP < contents[j].origFP

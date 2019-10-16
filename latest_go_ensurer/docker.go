@@ -24,7 +24,7 @@ func updateDockerfiles(dockerfilePaths map[string]bool, goVers string) ([]fileCo
 			return nil, fmt.Errorf("unable to read contents of Dockerfile %#v: %s", fp, err)
 		}
 
-		contentsToWrite, err := updateDockerfile(fp, origFileContents, goVers)
+		contentsToWrite, err := updateSingleDockerfile(fp, origFileContents, goVers)
 		if err != nil {
 			return nil, err
 		}
@@ -35,7 +35,7 @@ func updateDockerfiles(dockerfilePaths map[string]bool, goVers string) ([]fileCo
 	return files, nil
 }
 
-func updateDockerfile(fp string, origFileContents []byte, goVers string) ([]byte, error) {
+func updateSingleDockerfile(fp string, origFileContents []byte, goVers string) ([]byte, error) {
 	fileContents := make([]byte, len(origFileContents))
 	copy(fileContents, origFileContents)
 	lines := bytes.Split(fileContents, []byte{'\n'})
