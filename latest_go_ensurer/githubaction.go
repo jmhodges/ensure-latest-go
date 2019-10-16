@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 
@@ -36,134 +37,239 @@ func updateGitHubActionFiles(actionfilePaths map[string]bool, goVers string) ([]
 }
 
 func updateSingleGitHubActionFile(fp string, origFileContents []byte, goVers string) ([]byte, error) {
-	outer := make(map[string]interface{})
-	err := yaml.Unmarshal(origFileContents, outer)
+	topMap := make(yaml.MapSlice, 0)
+	err := yaml.Unmarshal(origFileContents, &topMap)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse GitHub Action config file %#v: %s", fp, err)
 	}
-
-	jobsInt, found := outer["jobs"]
-	if !found {
-		return origFileContents, nil
-	}
-	jobs, ok := jobsInt.(map[interface{}]interface{})
-	if !ok {
-		return origFileContents, nil
-	}
-	var fileContentsUpdated bool
-	for _, jobInt := range jobs {
-		job, ok := jobInt.(map[interface{}]interface{})
+	out := make(yaml.MapSlice, 0, len(topMap))
+	for tmi, mapItem := range topMap {
+		k, ok := mapItem.Key.(string)
 		if !ok {
-			break
-		}
-		updated, err := updateGitHubActionGoMatrix(fp, job, goVers)
-		if err != nil {
-			return nil, err
-		}
-		if updated {
-			fileContentsUpdated = true
-		}
-		stepsInt, found := job["steps"]
-		if !found {
-			continue
-		}
-		steps, ok := stepsInt.([]interface{})
-		if !ok {
-			continue
-		}
-		for i, stepInt := range steps {
-			step, ok := stepInt.(map[interface{}]interface{})
-			usesInt, found := step["uses"]
-			if !found {
-				continue
-			}
-			uses, ok := usesInt.(string)
+			boolK, ok := mapItem.Key.(bool)
 			if !ok {
-				continue
+				return nil, fmt.Errorf("GitHub Action config file %#v had a non-string top-level key %v (%T)", fp, mapItem.Key, mapItem.Key)
 			}
-
-			if strings.HasPrefix(uses, "actions/setup-go@") || uses == "actions/setup-go" {
-				withInt, found := step["with"]
-				if !found {
-					step["with"] = map[string]string{
-						"go-version": goVers,
-					}
-				}
-				with, ok := withInt.(map[interface{}]interface{})
-				if !ok {
-					break
-				}
-				oldGoVersInt := with["go-version"]
-				oldGoVers, ok := oldGoVersInt.(string)
-				if !ok {
-					return nil, fmt.Errorf("go-version in GitHub Action config file %#v wasn't a string as expected", fp)
-				}
-
-				isLiteral := strings.Index(oldGoVers, "{{") == -1
-				if isLiteral && oldGoVers != goVers {
-					with["go-version"] = goVers
-					step["with"] = with
-					fileContentsUpdated = true
-				} else {
-					// We're going to assume everyone uses {{ matrix.go }} as
-					// the variable if go-version isn't a single version and so
-					// do nothing here.
-				}
-				steps[i] = step
+			if ok && boolK {
+				// gopkg.in/yaml.v2 is parsing GitHub Action's top-level "on" key as the boolean literal 'true'.
+				// So, swap it out here.
+				mapItem = yaml.MapItem{Key: "on", Value: mapItem.Value}
+				topMap[tmi] = mapItem
 			}
 		}
+		switch k {
+		case "jobs":
+			jobs, ok := mapItem.Value.(yaml.MapSlice)
+			if !ok {
+				return nil, fmt.Errorf("GitHub Action config file %#v had an ununderstandable 'jobs' value", fp)
+			}
+			newJobs, updated, err := updateGithubActionJobs(fp, jobs, goVers)
+			if err != nil {
+				return nil, err
+			}
+			if !updated {
+				return origFileContents, nil
+			}
+			out = append(out, yaml.MapItem{Key: "jobs", Value: newJobs})
+		default:
+			out = append(out, mapItem)
+		}
 	}
-	if !fileContentsUpdated {
-		return origFileContents, nil
-	}
-	// Make sure that "name" and "on" show up in the file first, because that's
-	// where most people put theirs and our yaml marshal re-orders the keys
-	// alphabetically.
-	b, err := topLevelOrderPreservedYaml(outer, origFileContents)
-	if err != nil {
-		return nil, fmt.Errorf("unable to marshal modified GitHub Action object as YAML: %s", err)
-	}
-	return b, nil
+	return yaml.Marshal(out)
 }
 
-func updateGitHubActionGoMatrix(fp string, job map[interface{}]interface{}, goVers string) (bool, error) {
-	wrapped := job
-	for _, key := range []string{"strategy", "matrix"} {
-		wrappedInt, found := wrapped[key]
-		if !found {
-			return false, nil
-		}
-		wrapped2, ok := wrappedInt.(map[interface{}]interface{})
+func updateGithubActionJobs(fp string, jobs yaml.MapSlice, goVers string) (yaml.MapSlice, bool, error) {
+	var fileContentsUpdated bool
+	for _, jobsMapItem := range jobs {
+		jobName, ok := jobsMapItem.Key.(string)
 		if !ok {
-			return false, nil
+			return jobs, false, fmt.Errorf("non-string key inside jobs object YAML")
 		}
-		wrapped = wrapped2
+		job, ok := jobsMapItem.Value.(yaml.MapSlice)
+		if !ok {
+			return jobs, false, fmt.Errorf("invalid type for job object in YAML")
+		}
+		for i, jobItem := range job {
+			k, ok := jobItem.Key.(string)
+			if !ok {
+				return jobs, false, fmt.Errorf("non-string key inside %#v job object YAML", jobName)
+			}
+			switch k {
+			case "strategy":
+				strategy, ok := jobItem.Value.(yaml.MapSlice)
+				if !ok {
+					return jobs, false, fmt.Errorf("invalid strategy object inside %#v job object YAML", jobName)
+				}
+				newStrategy, updated, err := updateGitHubActionGoMatrix(fp, strategy, goVers)
+				if err != nil {
+					return jobs, false, err
+				}
+				if updated {
+					fileContentsUpdated = true
+					job[i] = yaml.MapItem{Key: "strategy", Value: newStrategy}
+				}
+
+			case "steps":
+				log.Printf("FIXME what is 'steps' %T %s", jobItem.Value, jobItem.Value)
+				steps, ok := jobItem.Value.([]interface{})
+				if !ok {
+					return jobs, false, fmt.Errorf("invalid steps object type %T in job YAML", steps)
+				}
+				for stepInd, stepInt := range steps {
+					step, ok := stepInt.(yaml.MapSlice)
+					if !ok {
+						return jobs, false, fmt.Errorf("invalid type for object %d in steps YAML of job %#v", stepInd, jobName)
+					}
+					usesInd, uses, err := findMapItemAsString(step, "uses")
+					if err != nil {
+						return jobs, false, fmt.Errorf("invalide 'uses' in 'steps' YAML object: %s", err)
+					}
+					if usesInd == -1 {
+						continue
+					}
+
+					if strings.HasPrefix(uses, "actions/setup-go@") || uses == "actions/setup-go" {
+						newStep, updated, err := updateGithubActionGoStep(step, goVers)
+						if err != nil {
+							return jobs, false, err
+						}
+						if updated {
+							fileContentsUpdated = true
+							steps[stepInd] = newStep
+						}
+					}
+				}
+			}
+		}
 	}
-	var out []interface{}
-	oldGoVersInt, found := wrapped["go"]
-	if !found {
-		return false, nil // No matrix.go to find
+
+	return jobs, fileContentsUpdated, nil
+}
+
+func updateGithubActionGoStep(step yaml.MapSlice, goVers string) (yaml.MapSlice, bool, error) {
+	withInd, with, err := findMapItemAsMapSlice(step, "with")
+	if err != nil {
+		return step, false, fmt.Errorf("unable to find 'with' property in step YAML object: %s", err)
 	}
-	oldGoVers, ok := oldGoVersInt.([]interface{})
-	if !ok {
-		return false, fmt.Errorf("strategy.matrix.go wasn't an array as expected in GitHub Action config file %#v", fp)
+	if withInd != -1 {
+		oldGoVersInd, oldGoVers, err := findMapItemAsString(with, "go-version")
+		if err != nil {
+			return step, false, fmt.Errorf("unable to find 'go-version' property in 'with' YAML object: %s", err)
+		}
+		if oldGoVersInd != -1 {
+			isLiteral := strings.Index(oldGoVers, "{{") == -1
+			if isLiteral && oldGoVers != goVers {
+				with[oldGoVersInd] = yaml.MapItem{Key: "go-version", Value: goVers}
+				return step, true, nil
+			} else {
+				// We're going to assume if there's '{{' template markings, that
+				// they're using {{ matrix.go }} as the variable.
+			}
+		} else {
+			with = append(with, yaml.MapItem{Key: "go-version", Value: goVers})
+			step[withInd].Value = with
+			return step, true, nil
+		}
+	} else {
+		with := yaml.MapItem{
+			Key: "with",
+			Value: yaml.MapSlice{
+				yaml.MapItem{Key: "go-version", Value: goVers},
+			},
+		}
+		step = append(step, with)
+		return step, true, nil
+	}
+	return step, false, nil
+}
+
+func updateGitHubActionGoMatrix(fp string, strategy yaml.MapSlice, goVers string) (yaml.MapSlice, bool, error) {
+	i, matrix, err := findMapItemAsMapSlice(strategy, "matrix")
+	if err != nil {
+		return strategy, false, fmt.Errorf("in strategy object, %s", err)
+	}
+	if i == -1 {
+		return strategy, false, nil
+	}
+	i, oldGoVersions, err := findMapItemAsStringSlice(matrix, "go")
+	if err != nil {
+		return strategy, false, fmt.Errorf("error looking for 'go' key in strategy YAML object: %s", err)
+	}
+	if i == -1 {
+		return strategy, false, nil
 	}
 	versions := make(map[string]bool)
-	for _, oldVersInt := range oldGoVers {
-		oldVers, ok := oldVersInt.(string)
+	var newVersions []string
+	for _, vers := range oldGoVersions {
+		if !versions[vers] {
+			newVersions = append(newVersions, vers)
+			versions[vers] = true
+		}
+	}
+	if versions[goVers] {
+		return strategy, false, err
+	}
+	newVersions = append(newVersions, goVers)
+	matrix[i] = yaml.MapItem{Key: "go", Value: newVersions}
+	return strategy, true, err
+}
+
+func findMapItemAsMapSlice(obj yaml.MapSlice, desiredKey string) (int, yaml.MapSlice, error) {
+	i, out, err := findMapItem(obj, desiredKey)
+	if err != nil {
+		return i, yaml.MapSlice{}, err
+	}
+	if i == -1 {
+		return i, yaml.MapSlice{}, err
+	}
+	ret, ok := out.(yaml.MapSlice)
+	if !ok {
+		return i, yaml.MapSlice{}, fmt.Errorf("value of %#v in YAML object was not the expected yaml.MapSlice type", desiredKey)
+	}
+	return i, ret, nil
+
+}
+
+func findMapItemAsStringSlice(obj yaml.MapSlice, desiredKey string) (int, []string, error) {
+	i, out, err := findMapItem(obj, desiredKey)
+	if err != nil {
+		return i, nil, err
+	}
+	if i == -1 {
+		return i, nil, err
+	}
+	ret, ok := out.([]string)
+	if !ok {
+		return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []string type", desiredKey)
+	}
+	return i, ret, nil
+}
+
+func findMapItemAsString(obj yaml.MapSlice, desiredKey string) (int, string, error) {
+	i, out, err := findMapItem(obj, desiredKey)
+	if err != nil {
+		return i, "", err
+	}
+	if i == -1 {
+		return i, "", err
+	}
+	ret, ok := out.(string)
+	if !ok {
+		return i, "", fmt.Errorf("value of %#v in YAML object was not the expected string type", desiredKey)
+	}
+	return i, ret, nil
+
+}
+
+func findMapItem(obj yaml.MapSlice, desiredKey string) (int, interface{}, error) {
+	for i, item := range obj {
+		k, ok := item.Key.(string)
 		if !ok {
-			return false, fmt.Errorf("unknown type in 'matrix.go' array in GitHub Action config file %#v", fp)
+			return -1, nil, fmt.Errorf("non-string key found in YAML object")
 		}
-		if !versions[oldVers] {
-			out = append(out, oldVers)
-			versions[oldVers] = true
+		if k == desiredKey {
+			return i, item.Value, nil
 		}
 	}
-	var updated bool
-	if !versions[goVers] {
-		updated = true
-		out = append(out, interface{}(goVers))
-	}
-	wrapped["go"] = out
-	return updated, nil
+	return -1, nil, nil
 }

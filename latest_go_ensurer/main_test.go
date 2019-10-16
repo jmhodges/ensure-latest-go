@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"testing"
 
@@ -74,16 +73,17 @@ func TestDockerfileFromUpdate(t *testing.T) {
 }
 
 func TestGitHubActionGoldenPath(t *testing.T) {
-	actual, err := updateSingleGitHubActionFile("fake.yml", []byte(simpleGitHubAction), "1.22")
+	actualBytes, err := updateSingleGitHubActionFile("fake.yml", []byte(simpleGitHubAction), "1.22")
 	if err != nil {
 		t.Fatalf("updateSingleGitHubActionFile: %s", err)
 	}
-	expected := []byte(`name: Go
+	actual := string(actualBytes)
+	expected := `name: Go
 "on":
-  pull_request:
-    branches:
-    - master
   push:
+    branches:
+    - foobar
+  pull_request:
     branches:
     - master
 jobs:
@@ -91,18 +91,18 @@ jobs:
     name: Run Go build
     runs-on: ubuntu-latest
     steps:
-    - id: go
-      name: Set up Go
+    - name: Set up Go
       uses: actions/setup-go@v1
       with:
         go-version: "1.22"
+      id: go
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
     - name: Build
       run: go install -race ./...
-`)
-	if !bytes.Equal(expected, actual) {
-		t.Errorf("github action file update failed: %s\n%s", cmp.Diff(expected, actual), string(actual))
+`
+	if expected != actual {
+		t.Errorf("github action file update failed: %s", cmp.Diff(expected, actual))
 	}
 }
 
@@ -110,7 +110,7 @@ var simpleGitHubAction = `name: Go
 on: 
   push:
     branches: 
-      - master
+      - foobar
   pull_request:
     branches: 
       - master

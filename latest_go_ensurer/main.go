@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
+	"net/http"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 var (
@@ -19,7 +22,6 @@ var (
 
 func main() {
 	flag.Parse()
-	log.Println("FIXME PWD is", os.Getenv("PWD"))
 
 	excluded := make(map[string]bool)
 	for _, ef := range strings.Split(*excludeFiles, ",") {
@@ -101,8 +103,32 @@ type fileContent struct {
 }
 
 func getLatestGoVersion() (string, error) {
-	// FIXME implement
-	return "1.22", nil
+	client := http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get("https://golang.org/dl/?mode=json")
+	if err != nil {
+		return "", fmt.Errorf("unable to get list of Go releases from the golang.org/dl API: %s", err)
+	}
+	b, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		return "", fmt.Errorf("unable to read body golang.org/dl API response: %s", err)
+	}
+	var releases []goRelease
+	err = json.Unmarshal(b, &releases)
+	if err != nil {
+		return "", fmt.Errorf("unable to JSON parse golang.org/dl API response: %s", err)
+	}
+	for _, rel := range releases {
+		if rel.Stable {
+			return rel.Version[len("go"):], nil
+		}
+	}
+	return "", fmt.Errorf("no stable release found in golang.org/dl API response")
+}
+
+type goRelease struct {
+	Version string `json:"version"`
+	Stable  bool   `json:"stable"`
 }
 
 func abs(fp string) string {
