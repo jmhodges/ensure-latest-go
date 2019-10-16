@@ -79,7 +79,6 @@ func TestGitHubActionGoldenPath(t *testing.T) {
 		t.Fatalf("updateSingleGitHubActionFile: %s", err)
 	}
 	expected := []byte(`name: Go
-
 "on":
   pull_request:
     branches:
@@ -87,7 +86,6 @@ func TestGitHubActionGoldenPath(t *testing.T) {
   push:
     branches:
     - master
-
 jobs:
   test:
     name: Run Go build

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -119,40 +118,12 @@ func updateSingleGitHubActionFile(fp string, origFileContents []byte, goVers str
 	}
 	// Make sure that "name" and "on" show up in the file first, because that's
 	// where most people put theirs and our yaml marshal re-orders the keys
-	// alphabetically. Which means "jobs" would go up to the top, and there'd be
-	// a huge diff churn in it. Can't use yaml.Encoder in the prefix we're
-	// creating because that'll add '---' in between each "object".
-	buf := &bytes.Buffer{}
-	nameInt, found := outer["name"]
-	if found {
-		delete(outer, "name")
-		name, ok := nameInt.(string)
-		if ok {
-			nameBytes, err := yaml.Marshal(name)
-			if err != nil {
-				return nil, fmt.Errorf("unable to marshal YAML name entry: %s", err)
-			}
-			buf.WriteString("name: ")
-			buf.Write(nameBytes)
-			buf.WriteByte('\n')
-		}
-	}
-	onInt, found := outer["on"]
-	if found {
-		delete(outer, "on")
-		b, err := yaml.Marshal(map[string]interface{}{"on": onInt})
-		if err != nil {
-			return nil, fmt.Errorf("unable to marshal the 'on' map: %s", err)
-		}
-		buf.Write(b)
-		buf.WriteByte('\n')
-	}
-	enc := yaml.NewEncoder(buf)
-	err = enc.Encode(outer)
+	// alphabetically.
+	b, err := topLevelOrderPreservedYaml(outer, origFileContents)
 	if err != nil {
-		return nil, fmt.Errorf("unable to marshal YAML back for GitHub Action config file %#v: %s", fp, err)
+		return nil, fmt.Errorf("unable to marshal modified GitHub Action object as YAML: %s", err)
 	}
-	return buf.Bytes(), nil
+	return b, nil
 }
 
 func updateGitHubActionGoMatrix(fp string, job map[interface{}]interface{}, goVers string) (bool, error) {

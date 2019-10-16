@@ -69,7 +69,7 @@ func updateSingleTravisFile(fp string, origFileContents []byte, goVers string) (
 		return nil, fmt.Errorf("unknown type for 'go' value in travis config file %#v: %s", fp, err)
 	}
 	ty["go"] = out
-	b, err := yaml.Marshal(ty)
+	b, err := topLevelOrderPreservedYaml(ty, origFileContents)
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal YAML travis config file %#v: %s", fp, err)
 	}
