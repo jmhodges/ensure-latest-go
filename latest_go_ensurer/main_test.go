@@ -73,40 +73,12 @@ func TestDockerfileFromUpdate(t *testing.T) {
 }
 
 func TestGitHubActionGoldenPath(t *testing.T) {
-	actualBytes, err := updateSingleGitHubActionFile("fake.yml", []byte(simpleGitHubAction), "1.22")
-	if err != nil {
-		t.Fatalf("updateSingleGitHubActionFile: %s", err)
-	}
-	actual := string(actualBytes)
-	expected := `name: Go
-"on":
-  push:
-    branches:
-    - foobar
-  pull_request:
-    branches:
-    - master
-jobs:
-  test:
-    name: Run Go build
-    runs-on: ubuntu-latest
-    steps:
-    - name: Set up Go
-      uses: actions/setup-go@v1
-      with:
-        go-version: "1.22"
-      id: go
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v1
-    - name: Build
-      run: go install -race ./...
-`
-	if expected != actual {
-		t.Errorf("github action file update failed: %s", cmp.Diff(expected, actual))
-	}
-}
-
-var simpleGitHubAction = `name: Go
+	testcases := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input: `name: Go
 on: 
   push:
     branches: 
@@ -132,4 +104,103 @@ jobs:
 
     - name: Build
       run: go install -race ./...
-`
+`,
+			expected: `name: Go
+"on":
+  push:
+    branches:
+    - foobar
+  pull_request:
+    branches:
+    - master
+jobs:
+  test:
+    name: Run Go build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: "1.22"
+      id: go
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+    - name: Build
+      run: go install -race ./...
+`,
+		},
+		{
+			input: `name: Go
+on: 
+  push:
+    branches: 
+      - foobar
+  pull_request:
+    branches: 
+      - master
+
+jobs:
+  test:
+    name: Run Go build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [ '1.9', '1.10.x' ]
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go }}
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+
+    - name: Build
+      run: go install -race ./...
+`,
+			expected: `name: Go
+"on":
+  push:
+    branches:
+    - foobar
+  pull_request:
+    branches:
+    - master
+jobs:
+  test:
+    name: Run Go build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go:
+        - "1.9"
+        - 1.10.x
+        - "1.22"
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go }}
+      id: go
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+    - name: Build
+      run: go install -race ./...
+`,
+		},
+	}
+
+	for i, tc := range testcases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			actualBytes, err := updateSingleGitHubActionFile("fake.yml", []byte(tc.input), "1.22")
+			if err != nil {
+				t.Fatalf("updateSingleGitHubActionFile: %s", err)
+			}
+			actual := string(actualBytes)
+			if tc.expected != actual {
+				t.Errorf("github action file update failed: %s (%s)", cmp.Diff(tc.expected, actual), actual)
+			}
+		})
+	}
+}
