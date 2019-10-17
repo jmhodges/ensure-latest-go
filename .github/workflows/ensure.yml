@@ -2,19 +2,21 @@ name: Keeping Go up to date
 on:
   schedule:
     - cron: 47 4 * * *
+
 jobs:
-  fresh_go:
+  update_go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
         with:
-          ref: master
-      - uses: jmhodges/ensure_latest_go@action
+          ref: ensure_action
+      - run: pwd
+      - run: ls -l
+      - uses: jmhodges/ensure_latest_go@687232444be0b8ee9448aedaf976f46b0685fd2d # @f1045a83f2d5ca7014562b6577b1086c83e2a69a
         id: ensure_go
         with:
-          dockerfiles:
-            - ./Dockerfile
-      - run: echo "##[set-output name=pr_title;]updating to latest Go release ${{ steps.ensure_go.outputs.go_version}}"
+          dockerfiles: "./Dockerfile"
+      - run: echo "##[set-output name=pr_title;]update to latest Go release ${{ steps.ensure_go.outputs.go_version}}"
         id: pr_title_maker
       - name: Create pull request
         uses: peter-evans/create-pull-request@v1.5.2
