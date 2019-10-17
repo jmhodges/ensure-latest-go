@@ -204,3 +204,104 @@ jobs:
 		})
 	}
 }
+
+func TestTravisGoldenPath(t *testing.T) {
+	testcases := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input: `language: go
+go:
+  - 1.13.1
+
+sudo: required
+
+services:
+  - docker
+
+branches:
+  only:
+    - master
+    - /^test_/
+    - /^test-/
+
+install:
+  - go test -race -i .
+
+script:
+  - go test -race . && GOOS=linux GOARCH=amd64 go build -ldflags "-X main.buildSHA=${TRAVIS_COMMIT}" . && ./travis_docker_push.sh
+`,
+			expected: `language: go
+go:
+- 1.13.1
+- "1.22"
+sudo: required
+services:
+- docker
+branches:
+  only:
+  - master
+  - /^test_/
+  - /^test-/
+install:
+- go test -race -i .
+script:
+- go test -race . && GOOS=linux GOARCH=amd64 go build -ldflags "-X main.buildSHA=${TRAVIS_COMMIT}" . && ./travis_docker_push.sh
+`,
+		},
+		{
+			input: `language: go
+go:
+  - 1.13.1
+  - 1.10.0
+
+foobar: foo
+`,
+			expected: `language: go
+go:
+  - 1.13.1
+  - 1.10.0
+  - 1.22
+foobar: foo
+`,
+		},
+		{
+			input: `language: go
+go: 1.13.1
+branches:
+- nope
+`,
+			expected: `language: go
+go: 1.22
+branches:
+- nope
+`,
+		},
+
+		{
+			input: `language: go
+branches:
+- nope
+`,
+			expected: `language: go
+branches:
+- nope
+`,
+		},
+	}
+
+	for i, tc := range testcases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			actualBytes, err := updateSingleTravisFile("fake.yml", []byte(tc.input), "1.22")
+			if err != nil {
+				t.Fatalf("updateSingleTravisFile: %s", err)
+			}
+			actual := string(actualBytes)
+			if tc.expected != actual {
+				t.Errorf("github action file update failed: %s (%s)", cmp.Diff(tc.expected, actual), actual)
+			}
+		})
+	}
+
+}

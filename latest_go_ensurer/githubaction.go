@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/jmhodges/yaml.v2"
 )
 
 func updateGitHubActionFiles(actionfilePaths map[string]bool, goVers string) ([]fileContent, error) {
@@ -57,7 +57,7 @@ func updateSingleGitHubActionFile(fp string, origFileContents []byte, goVers str
 		return origFileContents, nil
 	}
 	topMap[jobsInd] = yaml.MapItem{Key: "jobs", Value: newJobs}
-	return yaml.Marshal(topMap)
+	return yamlMarshal(topMap)
 }
 
 func fixUpGitHubActionOnKey(fp string, topMap yaml.MapSlice) yaml.MapSlice {
@@ -194,96 +194,4 @@ func updateGitHubActionGoMatrix(fp string, strategy yaml.MapSlice, goVers string
 	newVersions = append(newVersions, goVers)
 	matrix[i] = yaml.MapItem{Key: "go", Value: newVersions}
 	return strategy, true, err
-}
-
-func findMapItemAsMapSlice(obj yaml.MapSlice, desiredKey string) (int, yaml.MapSlice, error) {
-	i, out, err := findMapItem(obj, desiredKey)
-	if err != nil {
-		return i, yaml.MapSlice{}, err
-	}
-	if i == -1 {
-		return i, yaml.MapSlice{}, err
-	}
-	ret, ok := out.(yaml.MapSlice)
-	if !ok {
-		return i, yaml.MapSlice{}, fmt.Errorf("value of %#v in YAML object was not the expected yaml.MapSlice type", desiredKey)
-	}
-	return i, ret, nil
-
-}
-
-func findMapItemAsMapSliceSlice(obj yaml.MapSlice, desiredKey string) (int, []yaml.MapSlice, error) {
-	i, mid, err := findMapItem(obj, desiredKey)
-	if err != nil {
-		return i, nil, err
-	}
-	if i == -1 {
-		return i, nil, err
-	}
-	out, ok := mid.([]interface{})
-	if !ok {
-		return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []yaml.MapSlice type", desiredKey)
-	}
-	ret := make([]yaml.MapSlice, 0, len(out))
-	for _, x := range out {
-		str, ok := x.(yaml.MapSlice)
-		if !ok {
-			return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []yaml.MapSlice type", desiredKey)
-		}
-		ret = append(ret, str)
-	}
-	return i, ret, nil
-
-}
-
-func findMapItemAsStringSlice(obj yaml.MapSlice, desiredKey string) (int, []string, error) {
-	i, mid, err := findMapItem(obj, desiredKey)
-	if err != nil {
-		return i, nil, err
-	}
-	if i == -1 {
-		return i, nil, err
-	}
-	out, ok := mid.([]interface{})
-	if !ok {
-		return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []string type", desiredKey)
-	}
-	ret := make([]string, 0, len(out))
-	for _, x := range out {
-		str, ok := x.(string)
-		if !ok {
-			return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []string type", desiredKey)
-		}
-		ret = append(ret, str)
-	}
-	return i, ret, nil
-}
-
-func findMapItemAsString(obj yaml.MapSlice, desiredKey string) (int, string, error) {
-	i, out, err := findMapItem(obj, desiredKey)
-	if err != nil {
-		return i, "", err
-	}
-	if i == -1 {
-		return i, "", err
-	}
-	ret, ok := out.(string)
-	if !ok {
-		return i, "", fmt.Errorf("value of %#v in YAML object was not the expected string type", desiredKey)
-	}
-	return i, ret, nil
-
-}
-
-func findMapItem(obj yaml.MapSlice, desiredKey string) (int, interface{}, error) {
-	for i, item := range obj {
-		k, ok := item.Key.(string)
-		if !ok {
-			return -1, nil, fmt.Errorf("non-string key found in YAML object")
-		}
-		if k == desiredKey {
-			return i, item.Value, nil
-		}
-	}
-	return -1, nil, nil
 }

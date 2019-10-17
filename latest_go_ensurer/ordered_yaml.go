@@ -3,42 +3,109 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"regexp"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/jmhodges/yaml.v2"
 )
 
-const regexpPrefixName = "key"
-
-var keyPrefixRE = regexp.MustCompile(`^(?P<` + regexpPrefixName + `>[\w-.]+):`)
-
-func topLevelOrderPreservedYaml(obj map[string]interface{}, origFileContents []byte) ([]byte, error) {
-	lines := bytes.Split(origFileContents, []byte{'\n'})
-	unorderedBytes := make(map[string][]byte)
-	for k, v := range obj {
-		b, err := yaml.Marshal(map[string]interface{}{k: v})
-		if err != nil {
-			return nil, fmt.Errorf("unable to re-marshal YAML object with key %#v and body %s: %s", k, v, err)
-		}
-		unorderedBytes[k] = b
+func findMapItemAsMapSlice(obj yaml.MapSlice, desiredKey string) (int, yaml.MapSlice, error) {
+	i, out, err := findMapItem(obj, desiredKey)
+	if err != nil {
+		return i, yaml.MapSlice{}, err
 	}
-	var orderedKeys []string
-	for _, line := range lines {
-		matches := keyPrefixRE.FindSubmatch(line)
-		for i, name := range keyPrefixRE.SubexpNames() {
-			if name == regexpPrefixName && len(matches) != 0 && len(matches[i]) != 0 {
-				out := bytes.Trim(matches[i], `"`)
-				orderedKeys = append(orderedKeys, string(out))
-			}
+	if i == -1 {
+		return i, yaml.MapSlice{}, err
+	}
+	ret, ok := out.(yaml.MapSlice)
+	if !ok {
+		return i, yaml.MapSlice{}, fmt.Errorf("value of %#v in YAML object was not the expected yaml.MapSlice type", desiredKey)
+	}
+	return i, ret, nil
+
+}
+
+func findMapItemAsMapSliceSlice(obj yaml.MapSlice, desiredKey string) (int, []yaml.MapSlice, error) {
+	i, mid, err := findMapItem(obj, desiredKey)
+	if err != nil {
+		return i, nil, err
+	}
+	if i == -1 {
+		return i, nil, err
+	}
+	out, ok := mid.([]interface{})
+	if !ok {
+		return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []yaml.MapSlice type", desiredKey)
+	}
+	ret := make([]yaml.MapSlice, 0, len(out))
+	for _, x := range out {
+		str, ok := x.(yaml.MapSlice)
+		if !ok {
+			return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []yaml.MapSlice type", desiredKey)
+		}
+		ret = append(ret, str)
+	}
+	return i, ret, nil
+
+}
+
+func findMapItemAsStringSlice(obj yaml.MapSlice, desiredKey string) (int, []string, error) {
+	i, mid, err := findMapItem(obj, desiredKey)
+	if err != nil {
+		return i, nil, err
+	}
+	if i == -1 {
+		return i, nil, err
+	}
+	out, ok := mid.([]interface{})
+	if !ok {
+		return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []string type", desiredKey)
+	}
+	ret := make([]string, 0, len(out))
+	for _, x := range out {
+		str, ok := x.(string)
+		if !ok {
+			return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []string type", desiredKey)
+		}
+		ret = append(ret, str)
+	}
+	return i, ret, nil
+}
+
+func findMapItemAsString(obj yaml.MapSlice, desiredKey string) (int, string, error) {
+	i, out, err := findMapItem(obj, desiredKey)
+	if err != nil {
+		return i, "", err
+	}
+	if i == -1 {
+		return i, "", err
+	}
+	ret, ok := out.(string)
+	if !ok {
+		return i, "", fmt.Errorf("value of %#v in YAML object was not the expected string type", desiredKey)
+	}
+	return i, ret, nil
+
+}
+
+func findMapItem(obj yaml.MapSlice, desiredKey string) (int, interface{}, error) {
+	for i, item := range obj {
+		k, ok := item.Key.(string)
+		if !ok {
+			return -1, nil, fmt.Errorf("non-string key found in YAML object")
+		}
+		if k == desiredKey {
+			return i, item.Value, nil
 		}
 	}
+	return -1, nil, nil
+}
+
+func yamlMarshal(obj yaml.MapSlice) ([]byte, error) {
 	buf := &bytes.Buffer{}
-	for _, key := range orderedKeys {
-		b, found := unorderedBytes[key]
-		if !found {
-			return nil, fmt.Errorf("expected to find a key %#v for YAML marshalling, but didn't find it in the given object", key)
-		}
-		buf.Write(b)
+	enc := yaml.NewEncoder(buf)
+	enc.SetLineLength(-1) // Disable line wrap
+	err := enc.Encode(obj)
+	if err != nil {
+		return nil, err
 	}
 	return buf.Bytes(), nil
 }

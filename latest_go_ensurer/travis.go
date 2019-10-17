@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/jmhodges/yaml.v2"
 )
 
 func updateTravisFiles(travisfilePaths map[string]bool, goVers string) ([]fileContent, error) {
@@ -25,7 +26,7 @@ func updateTravisFiles(travisfilePaths map[string]bool, goVers string) ([]fileCo
 
 		contentsToWrite, err := updateSingleTravisFile(fp, origFileContents, goVers)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to parse YAML travis config file %#v: %s", fp, err)
 		}
 		if contentsToWrite != nil {
 			files = append(files, fileContent{origFP: fp, contentsToWrite: contentsToWrite})
@@ -35,23 +36,32 @@ func updateTravisFiles(travisfilePaths map[string]bool, goVers string) ([]fileCo
 }
 
 func updateSingleTravisFile(fp string, origFileContents []byte, goVers string) ([]byte, error) {
-	ty := make(map[string]interface{})
-	err := yaml.Unmarshal(origFileContents, ty)
+	var ty yaml.MapSlice
+	err := yaml.Unmarshal(origFileContents, &ty)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse YAML travis config file %#v: %s", fp, err)
+		return nil, err
 	}
-	goVersions, found := ty["go"]
-	if !found {
+	log.Println("FIXME updateSingleTravisFile 1", ty)
+	i, goVersions, err := findMapItem(ty, "go")
+	if err != nil {
+		return nil, err
+	}
+	if i == -1 {
 		return origFileContents, nil
 	}
-	var out []interface{}
+	log.Println("FIXME updateSingleTravisFile 110", i, goVersions, err)
+	var fileContentsUpdated bool
 	switch oldGoVers := goVersions.(type) {
 	case string:
 		if oldGoVers != goVers {
-			out = []interface{}{oldGoVers, goVers}
+			ty[i].Value = goVers
+			fileContentsUpdated = true
 		}
 	case []interface{}:
 		versions := make(map[string]bool)
+		var out []string
+		log.Println("FIXME updateSingleTravisFile 30", oldGoVers, goVers)
+
 		for _, oldVersInt := range oldGoVers {
 			oldVers, ok := oldVersInt.(string)
 			if !ok {
@@ -63,15 +73,18 @@ func updateSingleTravisFile(fp string, origFileContents []byte, goVers string) (
 			}
 		}
 		if !versions[goVers] {
-			out = append(out, interface{}(goVers))
+			fileContentsUpdated = true
+			if len(versions) == 2 {
+				ty[i].Value = yaml.MapItem{Key: "go", Value: goVers}
+			} else {
+				ty[i].Value = append(out, goVers)
+			}
 		}
 	default:
 		return nil, fmt.Errorf("unknown type for 'go' value in travis config file %#v: %s", fp, err)
 	}
-	ty["go"] = out
-	b, err := topLevelOrderPreservedYaml(ty, origFileContents)
-	if err != nil {
-		return nil, fmt.Errorf("unable to marshal YAML travis config file %#v: %s", fp, err)
+	if fileContentsUpdated {
+		return yamlMarshal(ty)
 	}
-	return b, nil
+	return origFileContents, nil
 }
