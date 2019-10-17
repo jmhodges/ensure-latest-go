@@ -14,7 +14,7 @@ jobs:
         with:
           dockerfiles:
             - ./Dockerfile
-      - run: echo "##[set-output name=pr_title;]updating to latest Go release ${{ outputs.ensure_go.go_version}}"
+      - run: echo "##[set-output name=pr_title;]updating to latest Go release ${{ steps.ensure_go.outputs.go_version}}"
         id: pr_title_maker
       - name: Create pull request
         uses: peter-evans/create-pull-request@v1.5.2
