@@ -2,32 +2,26 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 )
 
-var (
-	excludeFiles     = flag.String("excludeFiles", "", "List of comma-seperated file paths to not update to the latest Go")
-	dockerfilesInput = flag.String("dockerfiles", "", "List of comma-separate file paths to Dockerfiles")
-	travisfilesInput = flag.String("travisfiles", "", "List of comma-separate file paths to .travis.yml Travis config files")
-	actionfilesInput = flag.String("actionfiles", "", "List of comma-separate file paths to GitHub Action config files")
-)
-
 func main() {
-	flag.Parse()
-
+	excludeFiles = os.Getenv("INPUT_EXCLUDES")
 	excluded := make(map[string]bool)
 	for _, ef := range strings.Split(*excludeFiles, ",") {
 		ef := abs(ef)
 		excluded[ef] = true
 	}
+
+	dockerfilesInput = os.Getenv("INPUT_DOCKERFILES")
 	dockerfiles := make(map[string]bool)
 	for _, df := range strings.Split(*dockerfilesInput, ",") {
 		df = abs(df)
@@ -36,6 +30,8 @@ func main() {
 		}
 		dockerfiles[df] = true
 	}
+
+	travisfilesInput = os.Getenv("INPUT_TRAVISFILES")
 	travisfiles := make(map[string]bool)
 	for _, tf := range strings.Split(*travisfilesInput, ",") {
 		tf = abs(tf)
@@ -45,6 +41,7 @@ func main() {
 		travisfiles[tf] = true
 	}
 
+	actionfilesInput = os.Getenv("INPUT_ACTIONFILES")
 	actionfiles := make(map[string]bool)
 	for _, af := range strings.Split(*actionfilesInput, ",") {
 		af = abs(af)
