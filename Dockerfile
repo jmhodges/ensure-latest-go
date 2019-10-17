@@ -1,0 +1,10 @@
+FROM golang:1.13.1
+
+WORKDIR /go/src/github.com/jmhodges/ensure_latest_go
+COPY ./vendor ./vendor
+COPY ./latest_go_ensurer ./latest_go_ensurer
+COPY ./entrypoint.sh /entrypoint.sh
+
+RUN go install github.com/jmhodges/ensure_latest_go/latest_go_ensurer
+
+ENTRYPOINT ["/entrypoint.sh"]

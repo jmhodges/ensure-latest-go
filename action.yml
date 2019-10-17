@@ -1,0 +1,25 @@
+name: 'Ensure latest Go'
+description: 'Creates PRs of Dockerfiles, .travis.ymls, and actions/setup-go Action steps when a new version of Go is released.'
+inputs:
+  dockerfiles:
+    description: 'A comma-seperated list of Dockerfiles to update when a new Go version is released. May be blank, but must be set'
+    required: false
+    default: ''
+  actionfiles:
+    description: 'A comma-seperated list of GitHub Action workflow files to update when a new Go version is released. May be blank, but must be set'
+    required: false
+    default: ''
+  travisfiles:
+    description: 'A comma-seperated list of Travis CI config files to update when a new Go version is released. May be blank, but must be set'
+    required: false
+    default: ''
+  exclude:
+    required: false
+    description: 'A comma-seperated list of file paths to not update.'
+    default: ''
+outputs:
+  go_version:
+    description: 'The version of Go used to update the configured files'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
