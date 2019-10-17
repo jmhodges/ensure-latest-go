@@ -234,7 +234,6 @@ script:
 `,
 			expected: `language: go
 go:
-- 1.13.1
 - "1.22"
 sudo: required
 services:

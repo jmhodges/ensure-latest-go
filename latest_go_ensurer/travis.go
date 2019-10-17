@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"gopkg.in/jmhodges/yaml.v2"
@@ -41,7 +40,7 @@ func updateSingleTravisFile(fp string, origFileContents []byte, goVers string) (
 	if err != nil {
 		return nil, err
 	}
-	log.Println("FIXME updateSingleTravisFile 1", ty)
+
 	i, goVersions, err := findMapItem(ty, "go")
 	if err != nil {
 		return nil, err
@@ -49,7 +48,6 @@ func updateSingleTravisFile(fp string, origFileContents []byte, goVers string) (
 	if i == -1 {
 		return origFileContents, nil
 	}
-	log.Println("FIXME updateSingleTravisFile 110", i, goVersions, err)
 	var fileContentsUpdated bool
 	switch oldGoVers := goVersions.(type) {
 	case string:
@@ -60,7 +58,6 @@ func updateSingleTravisFile(fp string, origFileContents []byte, goVers string) (
 	case []interface{}:
 		versions := make(map[string]bool)
 		var out []string
-		log.Println("FIXME updateSingleTravisFile 30", oldGoVers, goVers)
 
 		for _, oldVersInt := range oldGoVers {
 			oldVers, ok := oldVersInt.(string)
@@ -75,7 +72,7 @@ func updateSingleTravisFile(fp string, origFileContents []byte, goVers string) (
 		if !versions[goVers] {
 			fileContentsUpdated = true
 			if len(versions) == 1 {
-				ty[i].Value = goVers
+				ty[i].Value = []string{goVers}
 			} else {
 				ty[i].Value = append(out, goVers)
 			}
