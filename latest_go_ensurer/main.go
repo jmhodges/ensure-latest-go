@@ -110,6 +110,9 @@ func getLatestGoVersion() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to read body golang.org/dl API response: %s", err)
 	}
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("golang.org/dl API returned HTTP status code %d instead of a 200", resp.StatusCode)
+	}
 	var releases []goRelease
 	err = json.Unmarshal(b, &releases)
 	if err != nil {
