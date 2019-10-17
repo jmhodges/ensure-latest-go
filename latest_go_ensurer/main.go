@@ -21,35 +21,9 @@ func main() {
 		excluded[ef] = true
 	}
 
-	dockerfilesInput := os.Getenv("INPUT_DOCKERFILES")
-	dockerfiles := make(map[string]bool)
-	for _, df := range strings.Split(dockerfilesInput, ",") {
-		df = abs(df)
-		if df == "" || excluded[df] {
-			continue
-		}
-		dockerfiles[df] = true
-	}
-
-	travisfilesInput := os.Getenv("INPUT_TRAVISFILES")
-	travisfiles := make(map[string]bool)
-	for _, tf := range strings.Split(travisfilesInput, ",") {
-		tf = abs(tf)
-		if tf == "" || excluded[tf] {
-			continue
-		}
-		travisfiles[tf] = true
-	}
-
-	actionfilesInput := os.Getenv("INPUT_ACTIONFILES")
-	actionfiles := make(map[string]bool)
-	for _, af := range strings.Split(actionfilesInput, ",") {
-		af = abs(af)
-		if af == "" || excluded[af] {
-			continue
-		}
-		actionfiles[af] = true
-	}
+	dockerfiles := gatherDockerfiles(excluded)
+	travisfiles := gatherTravisfiles(excluded)
+	actionfiles := gatherGitHubActions(excluded)
 
 	if len(dockerfiles)+len(actionfiles)+len(travisfiles) == 0 {
 		log.Fatalf("latest_go_ensurer: no files given to update. Set the dockerfiles, travisfiles, or actiondfiles arguments in your GitHub Action workflow")
@@ -139,4 +113,61 @@ func abs(fp string) string {
 		log.Fatalf("latest_go_ensurer: unable to get absolute path of %#v: %s", fp, err)
 	}
 	return out
+}
+
+func gatherDockerfiles(excluded map[string]bool) map[string]bool {
+	dockerfilesInput := strings.TrimSpace(os.Getenv("INPUT_DOCKERFILES"))
+	var dockerpaths []string
+	if len(dockerfilesInput) != 0 {
+		dockerpaths = strings.Split(dockerfilesInput, ",")
+	} else {
+		filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+			if info.Name() == "Dockerfile" {
+				dockerpaths = append(dockerpaths, path)
+			}
+			return nil
+		})
+	}
+	return uniqUnexcludedPaths(dockerpaths, excluded)
+}
+
+func gatherTravisfiles(excluded map[string]bool) map[string]bool {
+	travisfilesInput := strings.TrimSpace(os.Getenv("INPUT_TRAVISFILES"))
+	var travispaths []string
+	if len(travisfilesInput) != 0 {
+		travispaths = strings.Split(travisfilesInput, ",")
+	} else {
+		travispaths = append(travispaths, ".travis.yml")
+	}
+	return uniqUnexcludedPaths(travispaths, excluded)
+}
+
+func gatherGitHubActions(excluded map[string]bool) map[string]bool {
+	actionfilesInput := strings.TrimSpace(os.Getenv("INPUT_ACTIONFILES"))
+	var actionpaths []string
+	if len(actionfilesInput) != 0 {
+		actionpaths = strings.Split(actionfilesInput, ",")
+	} else {
+		filepath.Walk(".github/workflows/", func(path string, info os.FileInfo, err error) error {
+			exc := filepath.Ext(info.Name())
+			if exc == ".yml" || exc == ".yaml" {
+				actionpaths = append(actionpaths, path)
+			}
+			return nil
+		})
+	}
+
+	return uniqUnexcludedPaths(actionpaths, excluded)
+}
+
+func uniqUnexcludedPaths(paths []string, excluded map[string]bool) map[string]bool {
+	files := make(map[string]bool)
+	for _, fp := range paths {
+		fp = abs(fp)
+		if fp == "" || excluded[fp] {
+			continue
+		}
+		files[fp] = true
+	}
+	return files
 }
