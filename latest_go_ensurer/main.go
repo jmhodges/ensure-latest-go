@@ -14,16 +14,16 @@ import (
 )
 
 func main() {
-	excludeFiles = os.Getenv("INPUT_EXCLUDES")
+	excludeFiles := os.Getenv("INPUT_EXCLUDES")
 	excluded := make(map[string]bool)
-	for _, ef := range strings.Split(*excludeFiles, ",") {
+	for _, ef := range strings.Split(excludeFiles, ",") {
 		ef := abs(ef)
 		excluded[ef] = true
 	}
 
-	dockerfilesInput = os.Getenv("INPUT_DOCKERFILES")
+	dockerfilesInput := os.Getenv("INPUT_DOCKERFILES")
 	dockerfiles := make(map[string]bool)
-	for _, df := range strings.Split(*dockerfilesInput, ",") {
+	for _, df := range strings.Split(dockerfilesInput, ",") {
 		df = abs(df)
 		if df == "" || excluded[df] {
 			continue
@@ -31,9 +31,9 @@ func main() {
 		dockerfiles[df] = true
 	}
 
-	travisfilesInput = os.Getenv("INPUT_TRAVISFILES")
+	travisfilesInput := os.Getenv("INPUT_TRAVISFILES")
 	travisfiles := make(map[string]bool)
-	for _, tf := range strings.Split(*travisfilesInput, ",") {
+	for _, tf := range strings.Split(travisfilesInput, ",") {
 		tf = abs(tf)
 		if tf == "" || excluded[tf] {
 			continue
@@ -41,9 +41,9 @@ func main() {
 		travisfiles[tf] = true
 	}
 
-	actionfilesInput = os.Getenv("INPUT_ACTIONFILES")
+	actionfilesInput := os.Getenv("INPUT_ACTIONFILES")
 	actionfiles := make(map[string]bool)
-	for _, af := range strings.Split(*actionfilesInput, ",") {
+	for _, af := range strings.Split(actionfilesInput, ",") {
 		af = abs(af)
 		if af == "" || excluded[af] {
 			continue
@@ -52,7 +52,7 @@ func main() {
 	}
 
 	if len(dockerfiles)+len(actionfiles)+len(travisfiles) == 0 {
-		log.Fatalf("latest_go_ensurer: no files given to update. Set -dockerfiles, -travisfiles, or -githubActionFiles")
+		log.Fatalf("latest_go_ensurer: no files given to update. Set the dockerfiles, travisfiles, or actiondfiles arguments in your GitHub Action workflow")
 	}
 
 	goVers, err := getLatestGoVersion()
