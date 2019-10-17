@@ -74,8 +74,8 @@ func updateSingleTravisFile(fp string, origFileContents []byte, goVers string) (
 		}
 		if !versions[goVers] {
 			fileContentsUpdated = true
-			if len(versions) == 2 {
-				ty[i].Value = yaml.MapItem{Key: "go", Value: goVers}
+			if len(versions) == 1 {
+				ty[i].Value = goVers
 			} else {
 				ty[i].Value = append(out, goVers)
 			}

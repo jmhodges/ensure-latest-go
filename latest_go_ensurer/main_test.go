@@ -260,9 +260,9 @@ foobar: foo
 `,
 			expected: `language: go
 go:
-  - 1.13.1
-  - 1.10.0
-  - 1.22
+- 1.13.1
+- 1.10.0
+- "1.22"
 foobar: foo
 `,
 		},
@@ -273,7 +273,7 @@ branches:
 - nope
 `,
 			expected: `language: go
-go: 1.22
+go: "1.22"
 branches:
 - nope
 `,
