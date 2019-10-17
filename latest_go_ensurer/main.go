@@ -60,6 +60,8 @@ func main() {
 		log.Fatalf("latest_go_ensurer: %s", err)
 	}
 
+	fmt.Println(goVers) // for set-output in the GitHub Action
+
 	// Check that we can read and parse all of the files before writing changes
 	// back to the file system. This won't avoid all partial write problems, but
 	// it'll avoid obvious stuff.
