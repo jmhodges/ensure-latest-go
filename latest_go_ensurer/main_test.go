@@ -9,50 +9,42 @@ import (
 
 func TestDockerfileFromUpdate(t *testing.T) {
 	testcases := []struct {
-		origLine          string
-		imageNameToUpdate string
-		newImageTag       string
-		expected          string
+		origLine    string
+		newImageTag string
+		expected    string
 	}{
 		{
 			"from golangadf aa",
-			"golang",
 			"1.13",
 			"from golangadf aa",
 		},
 		{
-			"from    golang2:1.1 aa",
-			"golang2",
-			"1.13",
-			"from    golang2:1.13 aa",
+			"from    golang:1.1.1 aa",
+			"1.13.1",
+			"from    golang:1.13.1 aa",
 		},
 		{
-			"from golang2",
-			"golang2",
+			"from golang",
 			"1.2",
-			"from golang2:1.2",
+			"from golang:1.2",
 		},
 		{
-			"from golang2 # foobar",
-			"golang2",
+			"from golang # foobar",
 			"1.2",
-			"from golang2:1.2 # foobar",
+			"from golang:1.2 # foobar",
 		},
 		{
-			"from golang2# foobar",
-			"golang2",
+			"from golang# foobar",
 			"1.2",
-			"from golang2:1.2# foobar",
+			"from golang:1.2# foobar",
 		},
 		{
-			"FROM    golang2# foobar",
-			"golang2",
+			"FROM    golang# foobar",
 			"1.2",
-			"FROM    golang2:1.2# foobar",
+			"FROM    golang:1.2# foobar",
 		},
 		{
 			"FROM golang:1.13.1",
-			"golang",
 			"1.1",
 			"FROM golang:1.1",
 		},
@@ -60,7 +52,7 @@ func TestDockerfileFromUpdate(t *testing.T) {
 
 	for i, tc := range testcases {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			actual, err := updateDockerfileFromLine([]byte(tc.origLine), tc.imageNameToUpdate, tc.newImageTag)
+			actual, err := updateDockerfileFromLine([]byte(tc.origLine), tc.newImageTag)
 			if err != nil {
 				t.Errorf("updateDockerfileFromLine error: %s", err)
 				return

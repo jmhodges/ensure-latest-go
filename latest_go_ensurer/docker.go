@@ -41,7 +41,7 @@ func updateSingleDockerfile(fp string, origFileContents []byte, goVers string) (
 	lines := bytes.Split(fileContents, []byte{'\n'})
 	for i, line := range lines {
 		if bytes.HasPrefix(bytes.ToLower(bytes.TrimSpace(line)), []byte("from ")) {
-			line, err := updateDockerfileFromLine(line, "golang", goVers)
+			line, err := updateDockerfileFromLine(line, goVers)
 			if err != nil {
 				// This is almost certainly from a regexp compiliation problem,
 				// but, just in case.
@@ -54,21 +54,18 @@ func updateSingleDockerfile(fp string, origFileContents []byte, goVers string) (
 	return bytes.Join(lines, []byte{'\n'}), nil
 }
 
-func updateDockerfileFromLine(fromLine []byte, origImageName string, goVers string) ([]byte, error) {
-	newImage := origImageName + ":" + goVers
-	fromExpr := `^(?P<prefix>(?i:from)\s+)` + regexp.QuoteMeta(origImageName) + `(\:[\w-.]+)?(?P<suffix>(\s|#).*)?$`
-	imageRe, err := regexp.Compile(fromExpr)
-	if err != nil {
-		return nil, fmt.Errorf("unable to compile regexp %#v for image %#v: %s", fromExpr, origImageName, err)
-	}
-	matches := imageRe.FindSubmatch(fromLine)
+var dockerImageRe = regexp.MustCompile(`^(?P<prefix>(?i:from)\s+)golang(\:[\w-.]+)?(?P<suffix>(\s|#).*)?$`)
+
+func updateDockerfileFromLine(fromLine []byte, goVers string) ([]byte, error) {
+	newImage := "golang:" + goVers
+	matches := dockerImageRe.FindSubmatch(fromLine)
 	if len(matches) == 0 {
 		return fromLine, nil
 	}
 	// Capturing the prefix preserves the capitalization and whitespace of the
 	// FROM part.
 	var prefix, suffix []byte
-	for i, matchName := range imageRe.SubexpNames() {
+	for i, matchName := range dockerImageRe.SubexpNames() {
 		if matchName == "prefix" {
 			prefix = matches[i]
 		}
