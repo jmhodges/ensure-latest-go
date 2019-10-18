@@ -1,4 +1,4 @@
-module github.com/jmhodges/ensure_latest_go
+module github.com/jmhodges/ensure-latest-go
 
 go 1.13
 
