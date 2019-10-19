@@ -4,7 +4,10 @@ Ensure-latest-go is a GitHub Action to keep Dockerfiles, Travis CI configs,
 and GitHub Actions using the latest stable version of Go.
 
 
-This Action is designed to work in conjunction with the `actions/checkout` and `peter-evans/create-pull-request` Actions to keep the configurations within up to date with the latest released version of Go. With those tools in place, new pull requests will be made to the repository 
+This Action is designed to work in conjunction with `actions/checkout` and
+`peter-evans/create-pull-request` to keep your repository on the latest released
+version of Go. When a new Go release is discovered by it, a new pull request
+will be generated with the appropriate changes to your configuration.
 
 ## Usage
 Below is the common case configuration:
