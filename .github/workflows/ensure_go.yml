@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@master
         with:
           ref: master
-      - uses: jmhodges/ensure-latest-go@test
+      - uses: jmhodges/ensure-latest-go@852cb0b801d7723342816d2344ce72eded7caf53
         id: ensure_go
       - run: echo "##[set-output name=pr_title;]update to latest Go release ${{ steps.ensure_go.outputs.go_version}}"
         id: pr_title_maker
@@ -21,3 +21,5 @@ jobs:
           PULL_REQUEST_BODY: Auto-generated pull request created by the GitHub Actions [create-pull-request](https://github.com/peter-evans/create-pull-request) and [ensure-latest-go](https://github.com/jmhodges/ensure-latest-go). 
           COMMIT_MESSAGE: ${{ steps.pr_title_maker.outputs.pr_title }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_SUFFIX: none
+          PULL_REQUEST_BRANCH: ensure-latest-go/patch-${{$$steps.ensure_go.outputs.go_version }}
