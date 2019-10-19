@@ -1,21 +1,21 @@
 name: 'Ensure latest Go'
 description: 'Creates PRs of Dockerfiles, .travis.ymls, and actions/setup-go Action steps when a new version of Go is released.'
 inputs:
+  exclude:
+    required: false
+    description: 'A comma-seperated list of file paths to not update.'
+    default: ''
+  actionfiles:
+    description: 'A comma-seperated list of GitHub Action workflow files to update when a new Go version is released. If set, it will override the default behavior of updating all of the GitHub Action files using actions/setup-go in .github/workflows/.'
+    required: false
+    default: ''
   dockerfiles:
     description: 'A comma-seperated list of Dockerfiles to update when a new Go version is released. If set, it will override the default behavior of updating any `golang` image Dockerfile in the repo.'
     required: false
     default: ''
-  actionfiles:
-    description: 'A comma-seperated list of GitHub Action workflow files to update when a new Go version is released. If set, it will override the default behavior of updating all of the GitHub Action files using actions/setup-go in .github/workflows/'
-    required: false
-    default: ''
   travisfiles:
-    description: 'A comma-seperated list of Travis CI config files to update when a new Go version is released. If set, it will override the default behavior of updating (but not creating) the "go" setting in a top-level .travis.yml file'
+    description: 'A comma-seperated list of Travis CI config files to update when a new Go version is released. If set, it will override the default behavior of updating (but not creating) the "go" setting in a top-level .travis.yml file.'
     required: false
-    default: ''
-  exclude:
-    required: false
-    description: 'A comma-seperated list of file paths to not update.'
     default: ''
 outputs:
   go_version:
