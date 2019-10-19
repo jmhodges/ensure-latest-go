@@ -1,7 +1,10 @@
 name: Keeping Go up to date
 on:
+  schedule:
+    - cron: 47 4 * * *
   push:
     branches:
+      - master
       - test
 jobs:
   fresh_go:
