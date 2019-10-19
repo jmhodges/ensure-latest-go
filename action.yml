@@ -19,4 +19,4 @@ outputs:
 runs:
   using: 'docker'
   # this is tag jmhogdes/ensure-latest-go:1.0.0 on dockerhub
-  image: 'docker://jmhodges/ensure-latest-go@sha256:15652cbfaf04fee2d57521106dd3ec1de38fe9c1d8175d9e62d86706f97c9b30'
+  image: 'docker://jmhodges/ensure-latest-go@sha256:33d7303a5d088e12763e087e7e32c7cadaa4f644c3c5ec026d0e0e124e2dbd3d
