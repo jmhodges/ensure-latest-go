@@ -2,6 +2,9 @@ name: Keeping Go up to date
 on:
   schedule:
     - cron: 47 4 * * *
+  pull_request:
+    branches:
+      - master
   push:
     branches:
       - master
