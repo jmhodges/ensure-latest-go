@@ -15,7 +15,7 @@ inputs:
     default: ''
 outputs:
   go_version:
-    description: 'The version of Go used to update the configured files'
+    description: 'The version of Go used to update the configured files.'
 runs:
   using: 'docker'
   image: 'Dockerfile'
