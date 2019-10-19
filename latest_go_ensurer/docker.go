@@ -54,7 +54,8 @@ func updateSingleDockerfile(fp string, origFileContents []byte, goVers string) (
 	return bytes.Join(lines, []byte{'\n'}), nil
 }
 
-var dockerImageRe = regexp.MustCompile(`^(?P<prefix>(?i:from)\s+)golang(\:[\w-.]+)?(?P<suffix>(\s|#).*)?$`)
+var dockerImageRe = regexp.MustCompile(`^(?P<prefix>(?i:from)\s+)golang(?P<tag>\:[\w-.]+)?(?P<suffix>(\s|#).*)?$`)
+var dockerTagRe = regexp.MustCompile(`:\d+\.\d+(\.\d+)?-`)
 
 func updateDockerfileFromLine(fromLine []byte, goVers string) ([]byte, error) {
 	matches := dockerImageRe.FindSubmatch(fromLine)
@@ -70,6 +71,16 @@ func updateDockerfileFromLine(fromLine []byte, goVers string) ([]byte, error) {
 		}
 		if matchName == "suffix" {
 			suffix = matches[i]
+		}
+		if matchName == "tag" {
+			// tag is :NUM.NUM.NUM-something
+			tag := matches[i]
+			if dockerTagRe.Match(tag) {
+				ind := bytes.Index(tag, []byte{'-'})
+				if ind != -1 {
+					goVers += string(tag[ind:])
+				}
+			}
 		}
 	}
 	newImage := "golang:" + goVers
