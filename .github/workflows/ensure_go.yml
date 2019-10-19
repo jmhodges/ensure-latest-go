@@ -1,8 +1,8 @@
 name: Keeping Go up to date
 on:
   push:
-    - branches:
-        - test
+    branches:
+      - test
 jobs:
   fresh_go:
     runs-on: ubuntu-latest
