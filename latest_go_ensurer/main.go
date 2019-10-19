@@ -24,8 +24,7 @@ func main() {
 
 	dockerfiles := gatherDockerfiles(excluded)
 	travisfiles := gatherTravisfiles(excluded)
-	actionVersions, err := gatherGitHubActionGoVersion(ghActionVersionFile, excluded)
-
+	actionVersions, err := gatherGitHubActionGoVersion(excluded)
 	if err != nil {
 		log.Fatalf("latest_go_ensurer: unable to parse .github/versions/go: %s", err)
 	}
