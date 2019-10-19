@@ -5,10 +5,6 @@ inputs:
     required: false
     description: 'A comma-seperated list of file paths to not update.'
     default: ''
-  actionfiles:
-    description: 'A comma-seperated list of GitHub Action workflow files to update when a new Go version is released. If set, it will override the default behavior of updating all of the GitHub Action files using actions/setup-go in .github/workflows/.'
-    required: false
-    default: ''
   dockerfiles:
     description: 'A comma-seperated list of Dockerfiles to update when a new Go version is released. If set, it will override the default behavior of updating any `golang` image Dockerfile in the repo.'
     required: false

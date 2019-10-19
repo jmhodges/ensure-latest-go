@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -23,10 +24,14 @@ func main() {
 
 	dockerfiles := gatherDockerfiles(excluded)
 	travisfiles := gatherTravisfiles(excluded)
-	actionfiles := gatherGitHubActions(excluded)
+	actionVersions, err := gatherGitHubActionGoVersion(ghActionVersionFile, excluded)
 
-	if len(dockerfiles)+len(actionfiles)+len(travisfiles) == 0 {
-		log.Fatalf("latest_go_ensurer: no files given to update. Set the dockerfiles, travisfiles, or actiondfiles arguments in your GitHub Action workflow")
+	if err != nil {
+		log.Fatalf("latest_go_ensurer: unable to parse .github/versions/go: %s", err)
+	}
+
+	if len(dockerfiles)+len(travisfiles) == 0 {
+		log.Fatalf("latest_go_ensurer: no files given to update. Set the dockerfiles, or travisfiles arguments in your GitHub Action workflow")
 	}
 
 	goVers, err := getLatestGoVersion()
@@ -49,7 +54,7 @@ func main() {
 		log.Fatalf("latest_go_ensurer: %s", err)
 	}
 
-	actionContents, err := updateGitHubActionFiles(actionfiles, goVers)
+	actionContents, err := updateGitHubActionVersionFile(ghActionVersionFile, actionVersions, goVers)
 	if err != nil {
 		log.Fatalf("latest_go_ensurer: %s", err)
 	}
@@ -146,22 +151,20 @@ func gatherTravisfiles(excluded map[string]bool) map[string]bool {
 	return uniqUnexcludedPaths(travispaths, excluded)
 }
 
-func gatherGitHubActions(excluded map[string]bool) map[string]bool {
-	actionfilesInput := strings.TrimSpace(os.Getenv("INPUT_ACTIONFILES"))
-	var actionpaths []string
-	if len(actionfilesInput) != 0 {
-		actionpaths = strings.Split(actionfilesInput, ",")
-	} else {
-		filepath.Walk(".github/workflows/", func(path string, info os.FileInfo, err error) error {
-			exc := filepath.Ext(info.Name())
-			if exc == ".yml" || exc == ".yaml" {
-				actionpaths = append(actionpaths, path)
-			}
-			return nil
-		})
-	}
+const ghActionVersionFile = ".github/versions/go"
 
-	return uniqUnexcludedPaths(actionpaths, excluded)
+func gatherGitHubActionGoVersion(excluded map[string]bool) (string, error) {
+	if excluded[ghActionVersionFile] {
+		return "", nil
+	}
+	b, err := ioutil.ReadFile(ghActionVersionFile)
+	if os.IsNotExist(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", nil
+	}
+	return string(bytes.TrimSpace(b)), nil
 }
 
 func uniqUnexcludedPaths(paths []string, excluded map[string]bool) map[string]bool {
