@@ -137,7 +137,11 @@ func gatherTravisfiles(excluded map[string]bool) map[string]bool {
 	if len(travisfilesInput) != 0 {
 		travispaths = strings.Split(travisfilesInput, ",")
 	} else {
-		travispaths = append(travispaths, ".travis.yml")
+		fp := ".travis.yml"
+		_, err := os.Stat(fp)
+		if err != nil {
+			travispaths = append(travispaths, fp)
+		}
 	}
 	return uniqUnexcludedPaths(travispaths, excluded)
 }
