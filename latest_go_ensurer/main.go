@@ -139,8 +139,7 @@ func gatherTravisfiles(excluded map[string]bool) map[string]bool {
 	} else {
 		fp := ".travis.yml"
 		_, err := os.Stat(fp)
-		if err != nil {
-			log.Println("TRAVIS IS WHAT", fp, err)
+		if err == nil {
 			travispaths = append(travispaths, fp)
 		}
 	}
