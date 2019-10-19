@@ -48,6 +48,16 @@ func TestDockerfileFromUpdate(t *testing.T) {
 			"1.1",
 			"FROM golang:1.1",
 		},
+		{
+			"from golang:1.13.1-alpine",
+			"1.13.3",
+			"from golang:1.13.3-alpine",
+		},
+		{
+			"from golang:1.-werd",
+			"1.13.3",
+			"from golang:1.13.3",
+		},
 	}
 
 	for i, tc := range testcases {
