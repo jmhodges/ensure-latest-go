@@ -18,8 +18,8 @@ outputs:
     description: 'The version of Go used to update the configured files.'
 runs:
   using: 'docker'
-  # this is tag jmhogdes/ensure-latest-go:1.0.1 on dockerhub
-  image: 'docker://jmhodges/ensure-latest-go@sha256:71ea40e3c8f6068eac5e708514eb40a898a292dd447b5c1faf083398f4dabf6d'
+  # this is tag jmhogdes/ensure-latest-go:1.0.2 on dockerhub
+  image: 'docker://jmhodges/ensure-latest-go@sha256:225f82f7725dd1b7acda0e0054591a728af494263db68c762e923b2d2e0c96cb'
 branding:
   icon: 'git-pull-request'
   color: 'purple'

@@ -29,8 +29,8 @@ func main() {
 		log.Fatalf("latest_go_ensurer: unable to parse .github/versions/go: %s", err)
 	}
 
-	if len(dockerfiles)+len(travisfiles) == 0 {
-		log.Fatalf("latest_go_ensurer: no files given to update. Set the dockerfiles, or travisfiles arguments in your GitHub Action workflow")
+	if len(dockerfiles)+len(travisfiles) == 0 && actionVersion == "" {
+		log.Fatalf("latest_go_ensurer: no files given to update. Set the dockerfiles, or travisfiles arguments in your GitHub Action workflow or add .github/versions/go to your repo")
 	}
 
 	goVers, err := getLatestGoVersion()
