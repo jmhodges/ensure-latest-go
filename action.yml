@@ -18,4 +18,5 @@ outputs:
     description: 'The version of Go used to update the configured files.'
 runs:
   using: 'docker'
-  image: 'Dockerfile'
+  # this is tag jmhogdes/ensure-latest-go:1.0.0 on dockerhub
+  image: 'docker://jmhodges/ensure-latest-go@sha256:15652cbfaf04fee2d57521106dd3ec1de38fe9c1d8175d9e62d86706f97c9b30'
