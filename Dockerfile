@@ -1,4 +1,4 @@
-FROM golang:1.13.1
+FROM golang:1.13.3
 
 WORKDIR /go/src/github.com/jmhodges/ensure-latest-go
 COPY ./vendor ./vendor
