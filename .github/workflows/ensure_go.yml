@@ -12,8 +12,6 @@ jobs:
           ref: master
       - uses: jmhodges/ensure-latest-go@test
         id: ensure_go
-        with:
-          travisfiles: './foobar'
       - run: echo "##[set-output name=pr_title;]update to latest Go release ${{ steps.ensure_go.outputs.go_version}}"
         id: pr_title_maker
       - name: Create pull request
