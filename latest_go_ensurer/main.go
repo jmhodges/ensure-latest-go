@@ -24,7 +24,7 @@ func main() {
 
 	dockerfiles := gatherDockerfiles(excluded)
 	travisfiles := gatherTravisfiles(excluded)
-	actionVersions, err := gatherGitHubActionGoVersion(excluded)
+	actionVersion, err := gatherGitHubActionGoVersion(excluded)
 	if err != nil {
 		log.Fatalf("latest_go_ensurer: unable to parse .github/versions/go: %s", err)
 	}
@@ -53,9 +53,13 @@ func main() {
 		log.Fatalf("latest_go_ensurer: %s", err)
 	}
 
-	actionContents, err := updateGitHubActionVersionFile(ghActionVersionFile, actionVersions, goVers)
-	if err != nil {
-		log.Fatalf("latest_go_ensurer: %s", err)
+	var actionContents []fileContent
+	if actionVersion != "" {
+		var err error
+		actionContents, err = updateGitHubActionVersionFile(ghActionVersionFile, actionVersion, goVers)
+		if err != nil {
+			log.Fatalf("latest_go_ensurer: %s", err)
+		}
 	}
 
 	var contents []fileContent
