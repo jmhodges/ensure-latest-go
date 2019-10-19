@@ -1,7 +1,8 @@
 name: Keeping Go up to date
 on:
-  schedule:
-    - cron: 47 4 * * *
+  push:
+    - branches:
+        - test
 jobs:
   fresh_go:
     runs-on: ubuntu-latest
