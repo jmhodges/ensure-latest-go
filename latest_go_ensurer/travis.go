@@ -15,17 +15,17 @@ func updateTravisFiles(travisfilePaths map[string]bool, goVers string) ([]fileCo
 		// bunch of work first
 		f, err := os.OpenFile(fp, os.O_RDWR, 0644)
 		if err != nil {
-			return nil, fmt.Errorf("unable to open Dockerfile %#v for reading: %w", fp, err)
+			return nil, fmt.Errorf("unable to open Travis CI config file %#v for reading: %w", fp, err)
 		}
 		defer f.Close()
 		origFileContents, err := ioutil.ReadAll(f)
 		if err != nil {
-			return nil, fmt.Errorf("unable to read contents of Dockerfile %#v: %s", fp, err)
+			return nil, fmt.Errorf("unable to read contents of Travis CI config file %#v: %s", fp, err)
 		}
 
 		contentsToWrite, err := updateSingleTravisFile(fp, origFileContents, goVers)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse YAML travis config file %#v: %s", fp, err)
+			return nil, fmt.Errorf("unable to parse YAML Travis CI config file %#v: %s", fp, err)
 		}
 		if contentsToWrite != nil {
 			files = append(files, fileContent{origFP: fp, contentsToWrite: contentsToWrite})
