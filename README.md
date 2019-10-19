@@ -39,7 +39,7 @@ jobs:
           COMMIT_MESSAGE: ${{ steps.pr_title_maker.outputs.pr_title }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH_SUFFIX: none
-          PULL_REQUEST_BRANCH: ensure-latest-go/patch-${{$$steps.ensure_go.outputs.go_version }}
+          PULL_REQUEST_BRANCH: ensure-latest-go/patch-${{ steps.ensure_go.outputs.go_version }}
 ```
 
 To enjoy the full benefits with GitHub Actions, you'll need to add a `.github/versions/go` file to your repository with the version of Go you want `actions/setup-go` to use. Then, modify your `actions/setup-go` job to include:
