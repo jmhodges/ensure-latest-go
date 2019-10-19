@@ -5,6 +5,6 @@ COPY ./vendor ./vendor
 COPY ./latest_go_ensurer ./latest_go_ensurer
 COPY ./entrypoint.sh /entrypoint.sh
 
-RUN go install github.com/jmhodges/ensure-latest-go/latest_go_ensurer
+RUN go install ./latest_go_ensurer
 
 ENTRYPOINT ["/entrypoint.sh"]
