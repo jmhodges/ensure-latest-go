@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@master
         with:
           ref: ensure_action
-      - uses: jmhodges/ensure_latest_go@action
+      - uses: jmhodges/ensure-latest-go@master
         id: ensure_go
         with:
           dockerfiles: "./Dockerfile"
