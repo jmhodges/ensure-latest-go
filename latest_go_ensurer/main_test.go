@@ -103,19 +103,19 @@ script:
 `,
 			expected: `language: go
 go:
-- "1.22"
+  - "1.22"
 sudo: required
 services:
-- docker
+  - docker
 branches:
   only:
-  - master
-  - /^test_/
-  - /^test-/
+    - master
+    - /^test_/
+    - /^test-/
 install:
-- go test -race -i .
+  - go test -race -i .
 script:
-- go test -race . && GOOS=linux GOARCH=amd64 go build -ldflags "-X main.buildSHA=${TRAVIS_COMMIT}" . && ./travis_docker_push.sh
+  - go test -race . && GOOS=linux GOARCH=amd64 go build -ldflags "-X main.buildSHA=${TRAVIS_COMMIT}" . && ./travis_docker_push.sh
 `,
 		},
 		{
@@ -128,9 +128,9 @@ foobar: foo
 `,
 			expected: `language: go
 go:
-- 1.13.1
-- 1.10.0
-- "1.22"
+  - 1.13.1
+  - 1.10.0
+  - "1.22"
 foobar: foo
 `,
 		},
@@ -138,23 +138,23 @@ foobar: foo
 			input: `language: go
 go: 1.13.1
 branches:
-- nope
+  - nope
 `,
 			expected: `language: go
 go: "1.22"
 branches:
-- nope
+  - nope
 `,
 		},
 
 		{
 			input: `language: go
 branches:
-- nope
+  - nope
 `,
 			expected: `language: go
 branches:
-- nope
+  - nope
 `,
 		},
 	}
