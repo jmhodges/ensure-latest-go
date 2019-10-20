@@ -4,108 +4,70 @@ import (
 	"bytes"
 	"fmt"
 
-	"gopkg.in/jmhodges/yaml.v2"
+	"gopkg.in/laverya/yaml.v3"
 )
 
-func findMapItemAsMapSlice(obj yaml.MapSlice, desiredKey string) (int, yaml.MapSlice, error) {
-	i, out, err := findMapItem(obj, desiredKey)
-	if err != nil {
-		return i, yaml.MapSlice{}, err
+func findYAMLObject(obj *yaml.Node, desiredKey string) (*yaml.Node, error) {
+	if obj.Kind == yaml.DocumentNode {
+		return findYAMLObject(obj.Content[0], desiredKey)
 	}
-	if i == -1 {
-		return i, yaml.MapSlice{}, err
+	if obj.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("YAML node is not a mapping node (was %d)", obj.Kind)
 	}
-	ret, ok := out.(yaml.MapSlice)
-	if !ok {
-		return i, yaml.MapSlice{}, fmt.Errorf("value of %#v in YAML object was not the expected yaml.MapSlice type", desiredKey)
-	}
-	return i, ret, nil
 
-}
-
-func findMapItemAsMapSliceSlice(obj yaml.MapSlice, desiredKey string) (int, []yaml.MapSlice, error) {
-	i, mid, err := findMapItem(obj, desiredKey)
-	if err != nil {
-		return i, nil, err
-	}
-	if i == -1 {
-		return i, nil, err
-	}
-	out, ok := mid.([]interface{})
-	if !ok {
-		return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []yaml.MapSlice type", desiredKey)
-	}
-	ret := make([]yaml.MapSlice, 0, len(out))
-	for _, x := range out {
-		str, ok := x.(yaml.MapSlice)
-		if !ok {
-			return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []yaml.MapSlice type", desiredKey)
+	// YAML maps are reutrned as a MappingNode with Content. The even index
+	// Nodes in Content are keys, and the odd index Nodes are the value of the
+	// previous key.
+	for i, item := range obj.Content {
+		if i%2 != 0 {
+			continue
 		}
-		ret = append(ret, str)
-	}
-	return i, ret, nil
-
-}
-
-func findMapItemAsStringSlice(obj yaml.MapSlice, desiredKey string) (int, []string, error) {
-	i, mid, err := findMapItem(obj, desiredKey)
-	if err != nil {
-		return i, nil, err
-	}
-	if i == -1 {
-		return i, nil, err
-	}
-	out, ok := mid.([]interface{})
-	if !ok {
-		return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []string type", desiredKey)
-	}
-	ret := make([]string, 0, len(out))
-	for _, x := range out {
-		str, ok := x.(string)
-		if !ok {
-			return i, nil, fmt.Errorf("value of %#v in YAML object was not the expected []string type", desiredKey)
+		if item.Kind != yaml.ScalarNode || item.Tag != "!!str" {
+			return nil, fmt.Errorf("non-string key found in YAML object")
 		}
-		ret = append(ret, str)
-	}
-	return i, ret, nil
-}
-
-func findMapItemAsString(obj yaml.MapSlice, desiredKey string) (int, string, error) {
-	i, out, err := findMapItem(obj, desiredKey)
-	if err != nil {
-		return i, "", err
-	}
-	if i == -1 {
-		return i, "", err
-	}
-	ret, ok := out.(string)
-	if !ok {
-		return i, "", fmt.Errorf("value of %#v in YAML object was not the expected string type", desiredKey)
-	}
-	return i, ret, nil
-
-}
-
-func findMapItem(obj yaml.MapSlice, desiredKey string) (int, interface{}, error) {
-	for i, item := range obj {
-		k, ok := item.Key.(string)
-		if !ok {
-			return -1, nil, fmt.Errorf("non-string key found in YAML object")
-		}
-		if k == desiredKey {
-			return i, item.Value, nil
+		if item.Value == desiredKey {
+			return obj.Content[i+1], nil
 		}
 	}
-	return -1, nil, nil
+	return nil, nil
 }
 
-func yamlMarshal(obj yaml.MapSlice) ([]byte, error) {
+func yamlMarshal(obj *yaml.Node) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	enc := yaml.NewEncoder(buf)
 	enc.SetLineLength(-1) // Disable line wrap
+	enc.SetIndent(2)
 	err := enc.Encode(obj)
 	if err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
+
+/* FIXME delete
+type mapSlice struct {
+	node  *yaml.Node
+	items []mapItem
+}
+
+func (ms *mapSlice) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.MappingNode {
+		return fmt.Errorf("mapSlice can't be parsed from a %s, must be yaml.MappingNode", node.Kind)
+	}
+	ms.node = node
+	for _, child := range node.Content {
+		value := child.Contents[0]
+		ms.items = append(ms.items, mapItem{
+			node: child,
+			Key: child.Value
+		})
+	}
+	return nil
+}
+
+type mapItem struct {
+	node  *yaml.Node
+	Key   string
+	Value *yaml.Node
+}
+*/

@@ -4,5 +4,5 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# gopkg.in/jmhodges/yaml.v2 v2.2.5
-gopkg.in/jmhodges/yaml.v2
+# gopkg.in/laverya/yaml.v3 v3.0.0-beta4
+gopkg.in/laverya/yaml.v3

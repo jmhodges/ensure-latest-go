@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
-	"gopkg.in/jmhodges/yaml.v2"
+	"gopkg.in/laverya/yaml.v3"
 )
 
 func updateTravisFiles(travisfilePaths map[string]bool, goVers string) ([]fileContent, error) {
@@ -35,46 +36,68 @@ func updateTravisFiles(travisfilePaths map[string]bool, goVers string) ([]fileCo
 }
 
 func updateSingleTravisFile(fp string, origFileContents []byte, goVers string) ([]byte, error) {
-	var ty yaml.MapSlice
-	err := yaml.Unmarshal(origFileContents, &ty)
+	ty := &yaml.Node{}
+	err := yaml.Unmarshal(origFileContents, ty)
 	if err != nil {
 		return nil, err
 	}
 
-	i, goVersions, err := findMapItem(ty, "go")
+	node, err := findYAMLObject(ty, "go")
 	if err != nil {
 		return nil, err
 	}
-	if i == -1 {
+	if node == nil {
 		return origFileContents, nil
 	}
 	var fileContentsUpdated bool
-	switch oldGoVers := goVersions.(type) {
-	case string:
+	switch node.Kind {
+	case yaml.ScalarNode:
+		oldGoVers := node.Value
+		switch node.Tag {
+		case "!!str", "!!int":
+			// oldGoVers is fine
+		default:
+			return nil, fmt.Errorf("unsupported type for 'go' value in travis config file %#v. Must be a string, or sequence", fp)
+		}
 		if oldGoVers != goVers {
-			ty[i].Value = goVers
+			node.Value = goVers
 			fileContentsUpdated = true
 		}
-	case []interface{}:
+	case yaml.SequenceNode:
 		versions := make(map[string]bool)
-		var out []string
+		var out []*yaml.Node
 
-		for _, oldVersInt := range oldGoVers {
-			oldVers, ok := oldVersInt.(string)
-			if !ok {
-				return nil, fmt.Errorf("unknown type in 'go' array in travis config file %#v: %s", fp, err)
+		for _, child := range node.Content {
+			if child.Kind != yaml.ScalarNode {
+				return nil, fmt.Errorf("'go' value in Travis CI config file was not a sequence of strings or ints")
 			}
-			if !versions[oldVers] {
-				out = append(out, oldVers)
-				versions[oldVers] = true
+			oldGoVers := child.Value
+			if !versions[oldGoVers] {
+				out = append(out, child)
+				versions[oldGoVers] = true
 			}
 		}
 		if !versions[goVers] {
 			fileContentsUpdated = true
 			if len(versions) == 1 {
-				ty[i].Value = []string{goVers}
+				// If it's just one version in the original file, swap it out
+				// whole cloth.
+				log.Println("original node was", node.Kind, node.Content)
+				node.Content = []*yaml.Node{
+					&yaml.Node{
+						Kind:  yaml.ScalarNode,
+						Tag:   "!!str",
+						Value: goVers,
+					},
+				}
 			} else {
-				ty[i].Value = append(out, goVers)
+				node.Content = append(out,
+					&yaml.Node{
+						Kind:  yaml.ScalarNode,
+						Tag:   "!!str",
+						Value: goVers,
+					},
+				)
 			}
 		}
 	default:
