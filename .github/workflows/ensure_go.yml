@@ -28,3 +28,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch-suffix: none
           branch: ensure-latest-go/patch-${{ steps.ensure_go.outputs.go_version }}
+          base: master
