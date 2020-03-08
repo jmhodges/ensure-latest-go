@@ -27,19 +27,18 @@ jobs:
       - uses: actions/checkout@master
         with:
           ref: master
-      - uses: jmhodges/ensure-latest-go@v1.0.1
+      - uses: jmhodges/ensure-latest-go@v1.0.2
         id: ensure_go
       - run: echo "##[set-output name=pr_title;]update to latest Go release ${{ steps.ensure_go.outputs.go_version}}"
         id: pr_title_maker
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v1.5.2
-        env:
-          PULL_REQUEST_TITLE: ${{ steps.pr_title_maker.outputs.pr_title }}
-          PULL_REQUEST_BODY: Auto-generated pull request created by the GitHub Actions [create-pull-request](https://github.com/peter-evans/create-pull-request) and [ensure-latest-go](https://github.com/jmhodges/ensure-latest-go).
-          COMMIT_MESSAGE: ${{ steps.pr_title_maker.outputs.pr_title }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH_SUFFIX: none
-          PULL_REQUEST_BRANCH: ensure-latest-go/patch-${{ steps.ensure_go.outputs.go_version }}
+        uses: peter-evans/create-pull-request@v2
+        with:
+          title: ${{ steps.pr_title_maker.outputs.pr_title }}
+          body: Auto-generated pull request created by the GitHub Actions [create-pull-request](https://github.com/peter-evans/create-pull-request) and [ensure-latest-go](https://github.com/jmhodges/ensure-latest-go).
+          commit-message: ${{ steps.pr_title_maker.outputs.pr_title }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ensure-latest-go/patch-${{ steps.ensure_go.outputs.go_version }}
 ```
 
 To enjoy the full benefits with GitHub Actions, you'll need to add a `.github/versions/go` file to your repository with the version of Go you want `actions/setup-go` to use. Then, modify your `actions/setup-go` job to include:
