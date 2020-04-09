@@ -1,4 +1,4 @@
-FROM golang:1.13.3-alpine
+FROM golang:1.14.2-alpine
 
 WORKDIR /go/src/github.com/jmhodges/ensure-latest-go
 COPY ./vendor ./vendor
